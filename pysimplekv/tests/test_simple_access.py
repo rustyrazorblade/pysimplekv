@@ -39,7 +39,7 @@ class PersistenceTest(BaseTest):
     def test_set_and_get(self):
         self.kv.put('test', 'test')
 
-        bucket = self.kv.get_bucket('test')
+        bucket = self.kv.current_file.get_bucket('test')
 
         bucket.should.contain("test")
 
@@ -49,7 +49,7 @@ class PersistenceTest(BaseTest):
 
 class HashingTest(BaseTest):
     def test_hashing(self):
-        bucket = self.kv.get_bucket("test")
+        bucket = self.kv.current_file.get_bucket("test")
         bucket.should.be.a(Bucket)
 
 

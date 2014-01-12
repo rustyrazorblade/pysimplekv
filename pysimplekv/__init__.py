@@ -44,6 +44,23 @@ import logging
 
 class PySimpleKV(object):
 
+    def __init__(self, location, initial_buckets = 128, \
+                 keys_per_bucket=32, key_size=128, entry_size=1024, resize_multiplier=2):
+        self.current_file = PySimpleKVFile(location, initial_buckets, keys_per_bucket=keys_per_bucket,
+                                           key_size=key_size, entry_size=entry_size,
+                                           resize_multiplier=resize_multiplier)
+
+    def get(self, key):
+        return self.current_file.get(key)
+
+    def put(self, key, value):
+        return self.current_file.put(key, value)
+
+    def delete(self, key):
+        return self.current_file.delete(key)
+
+
+class PySimpleKVFile(object):
     fp = None
     version = 1
     header = struct.Struct("4s5H")
