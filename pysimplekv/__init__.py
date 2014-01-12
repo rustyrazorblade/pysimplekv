@@ -45,8 +45,11 @@ import logging
 class PySimpleKV(object):
 
     def __init__(self, location, initial_buckets = 128, \
-                 keys_per_bucket=32, key_size=128, entry_size=1024, resize_multiplier=2):
-        self.current_file = PySimpleKVFile(location, initial_buckets, keys_per_bucket=keys_per_bucket,
+                 keys_per_bucket=32, key_size=128, \
+                 entry_size=1024, resize_multiplier=2):
+        
+        self.current_file = PySimpleKVFile(location, \
+                                           initial_buckets, keys_per_bucket=keys_per_bucket,
                                            key_size=key_size, entry_size=entry_size,
                                            resize_multiplier=resize_multiplier)
 
@@ -58,6 +61,9 @@ class PySimpleKV(object):
 
     def delete(self, key):
         return self.current_file.delete(key)
+
+    def resize(self, buckets, keys_per_bucket):
+        return
 
 
 class PySimpleKVFile(object):
@@ -119,16 +125,10 @@ class PySimpleKVFile(object):
         for i in range(initial_buckets):
             self.fp.write(zeroed_bucket)
 
-
-    def resize(self):
-        # create a new tmp file, rewrite, then swap
-        pass
-
     def get_bucket_number(self, key):
         md5 = hashlib.md5()
         md5.update(key)
         return int(md5.hexdigest(), 16) % self.buckets
-
 
     def get_bucket(self, key):
         bucket_num = self.get_bucket_number(key)
