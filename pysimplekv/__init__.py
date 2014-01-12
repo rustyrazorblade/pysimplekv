@@ -47,7 +47,7 @@ class PySimpleKV(object):
     def __init__(self, location, initial_buckets = 128, \
                  keys_per_bucket=32, key_size=128, \
                  entry_size=1024, resize_multiplier=2):
-        
+
         self.current_file = PySimpleKVFile(location, \
                                            initial_buckets, keys_per_bucket=keys_per_bucket,
                                            key_size=key_size, entry_size=entry_size,
@@ -67,6 +67,9 @@ class PySimpleKV(object):
 
 
 class PySimpleKVFile(object):
+    """
+    Manages a hash file once it's been created
+    """
     fp = None
     version = 1
     header = struct.Struct("4s5H")
