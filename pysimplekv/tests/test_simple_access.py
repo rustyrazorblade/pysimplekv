@@ -3,7 +3,8 @@ import os
 import sure
 import mock
 
-from pysimplekv import PySimpleKV
+from pysimplekv import PySimpleKV, Bucket
+
 
 class BaseTest(TestCase):
     location = "test.pskv"
@@ -16,7 +17,7 @@ class BaseTest(TestCase):
         except:
             pass
 
-        self.kv = PySimpleKV(self.location)
+        self.kv = PySimpleKV(self.location, initial_buckets=2, keys_per_bucket=3)
 
 class CreateAndOpenTest(BaseTest):
 
@@ -49,6 +50,6 @@ class PersistenceTest(BaseTest):
 class HashingTest(BaseTest):
     def test_hashing(self):
         bucket = self.kv.get_bucket("test")
-        bucket.should.be.ok
+        bucket.should.be.a(Bucket)
 
 

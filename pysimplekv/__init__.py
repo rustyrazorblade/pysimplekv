@@ -154,6 +154,11 @@ class Bucket(dict):
 
     def write(self, key, value):
         self.seek_key_position(key)
+        value_size = self.entry_size - self.key_size
+        packed = self.entry_reader.pack(key.ljust(self.key_size, " "), value.ljust(value_size, " "))
+        self.fp.write(packed)
+        logging.debug("Packed string: %s", packed)
+
         return
 
     def seek_key_position(self, key):
@@ -173,9 +178,16 @@ class Bucket(dict):
                 self.fp.seek(current)
                 return
 
-            if not k and not available:
-                available = current
-                logging.debug("setting available to %s", available)
+            if k:
+                logging.debug("found non matching key %s", k)
+
+            if not k:
+                logging.debug("empty key at %d", current)
+
+                if not available:
+                    available = current
+                    logging.debug("setting available to %s", available)
+
 
         if not available:
             raise BucketFullException
