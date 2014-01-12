@@ -120,6 +120,7 @@ class PySimpleKV(object):
 
     def get(self, key):
         bucket = self.get_bucket(key)
+        return bucket.get(key)
 
     def put(self, key, value):
         bucket = self.get_bucket(key)
@@ -196,9 +197,14 @@ class Bucket(dict):
         self.fp.seek(available)
 
 
-    def get(self, key):
+    def get(self, key, default=None):
 
-        return
+        for (k, v) in self.iteritems():
+            logging.debug("examining %s", k)
+            if k == key:
+                return k
+
+        return default
 
     def iteritems(self):
         result = []
