@@ -3,8 +3,19 @@ import os
 import sure
 import mock
 
-from pysimplekv import PySimpleKV, Bucket
+from pysimplekv import PySimpleKV, Page, Record
 
+class RecordEncodingTest(TestCase):
+    def test_key_encoding_and_decoding(self):
+        r = Record("name", "jon")
+        tmp = r.dumps()
+        r2 = Record.loads(tmp)
+        assert r == r2
+
+    def test_equality_check(self):
+        r = Record("name", "steve")
+        r2 = Record("name", "steve")
+        assert r == r2
 
 class BaseTest(TestCase):
     location = "test.pskv"
@@ -17,7 +28,7 @@ class BaseTest(TestCase):
         except:
             pass
 
-        self.kv = PySimpleKV(self.location, initial_buckets=2, keys_per_bucket=3)
+        self.kv = PySimpleKV(self.location, initial_pages=2, page_size=256)
 
 class CreateAndOpenTest(BaseTest):
 
@@ -50,6 +61,6 @@ class PersistenceTest(BaseTest):
 class HashingTest(BaseTest):
     def test_hashing(self):
         bucket = self.kv.current_file.get_bucket("test")
-        bucket.should.be.a(Bucket)
+        bucket.should.be.a(Page)
 
 
