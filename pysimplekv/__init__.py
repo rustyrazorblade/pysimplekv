@@ -104,7 +104,7 @@ class PySimpleKVFile(object):
         self.fp.write(header)
 
         # fill out the file
-        Page_size = keys_per_Page * entry_size
+        page_size = keys_per_page * entry_size
 
         # ensure we don't take up memory equal to our new file
         zeroed_Page = struct.pack("c", " ") * Page_size
@@ -123,8 +123,8 @@ class PySimpleKVFile(object):
         return int(md5.hexdigest(), 16) % self.Pages
 
     def get_page(self, key):
-        Page_num = self.get_page_number(key)
-        self.seek_to_Page(Page_num)
+        page_num = self.get_page_number(key)
+        self.seek_to_page(page_num)
         return Page(self.fp, self.entry_size, self.key_size, self.keys_per_Page)
 
     def get(self, key):
@@ -245,6 +245,10 @@ class Page(dict):
 
 
 class Record(object):
+    """
+    Record encoding
+    klen <short> vlen <short> key value
+    """
     key = None
     value = None
 
@@ -257,10 +261,19 @@ class Record(object):
         """
         returns a Record object
         """
-        return
+        # read the header out
+        (klen, vlen) = struct.unpack("HH", s[0:4])
+        key = s[4:4+klen]
+        value = s[4 + klen:]
+        return Record(key, value)
 
     def dumps(self):
-        return
+        klen = len(self.key)
+        vlen = len(self.value)
+
+        fmt = "HH%ds%ds" % (klen, vlen)
+        return struct.pack(fmt, klen, vlen, self.key, self.value)
+
 
     def __eq__(self, other):
         return self.key == other.key and self.value == other.value

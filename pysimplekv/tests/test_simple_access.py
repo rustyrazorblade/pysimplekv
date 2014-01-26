@@ -9,6 +9,7 @@ class RecordEncodingTest(TestCase):
     def test_key_encoding_and_decoding(self):
         r = Record("name", "jon")
         tmp = r.dumps()
+        assert tmp != ""
         r2 = Record.loads(tmp)
         assert r == r2
 
