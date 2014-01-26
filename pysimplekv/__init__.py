@@ -158,7 +158,7 @@ class Page(dict):
         mmf is a memory mapped file pointer
         """
         self.mmf = mmf
-        self.records = []
+        self.records = {}
         self.load()
 
     def load(self):
@@ -167,17 +167,19 @@ class Page(dict):
 
     def write(self, key, value):
         # writes out the full page back to disk
-
         return
 
+    def put(self, key, value):
+        self.is_dirty = True
+        if key in self.records:
+            response = 1
+        else:
+            response = 0
+        self.records[key] = Record(key, value)
+        return response
+
     def get(self, key, default=None):
-
-        for (k, v) in self.iteritems():
-            logging.debug("examining %s", k)
-            if k == key:
-                return k
-
-        return default
+        return self.records[key].value
 
     def iteritems(self):
         return []

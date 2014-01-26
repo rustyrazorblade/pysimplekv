@@ -2,8 +2,9 @@ from unittest import TestCase
 import os
 import sure
 import mock
+import mmap
 
-from pysimplekv import PySimpleKV, Page, Record
+from pysimplekv import PySimpleKV, Page, Record, PAGE_SIZE
 
 class RecordEncodingTest(TestCase):
     def test_key_encoding_and_decoding(self):
@@ -23,7 +24,6 @@ class BaseTest(TestCase):
 
     def setUp(self):
         # remove the test file if it exists
-
         try:
             os.remove(self.location)
         except:
@@ -51,5 +51,25 @@ class HashingTest(BaseTest):
     def test_hashing(self):
         page = self.kv.current_file.get_page("test")
         page.should.be.a(Page)
+
+
+class PageTest(TestCase):
+
+    def setUp(self):
+        self.page = Page(" " * 4096)
+
+    def test_set_response(self):
+        result = self.page.put("test", "blah")
+        assert result == 0
+
+        result = self.page.put("test", "blah")
+        assert result == 1
+
+    def test_set_and_get(self):
+        result = self.page.put("test", "blah")
+        assert result == 0
+
+        result = self.page.get("test")
+        result.should.be("blah")
 
 
