@@ -143,11 +143,14 @@ class PageFullException(Exception):
     pass
 
 
+page_header = struct.Struct("H")
+
 class Page(dict):
-    position = 0
-    entry_reader = None
-    is_dirty = False
-    start = None
+    """
+    Page format:
+    header: record_count <short>
+
+    """
     mmf = None # memory mapped file
 
     records = None
@@ -165,8 +168,21 @@ class Page(dict):
         # loads an entire Page into memory
         pass
 
-    def write(self, key, value):
+    def __len__(self):
+        return len(self.records)
+
+    def write(self):
         # writes out the full page back to disk
+        # compose the header
+        header = page_header.pack(len(self.records))
+        data = []
+        for r in self.records.itervalues():
+            assert isinstance(r, Record)
+            row_data = r.dumps()
+
+            packed = struct.pack("H%ds" % len(row_data), len(row_data), row_data)
+            data.append(packed)
+        self.mmf[:] = header + "".join(data)
         return
 
     def put(self, key, value):
@@ -176,6 +192,7 @@ class Page(dict):
         else:
             response = 0
         self.records[key] = Record(key, value)
+        self.write()
         return response
 
     def get(self, key, default=None):

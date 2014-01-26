@@ -56,7 +56,7 @@ class HashingTest(BaseTest):
 class PageTest(TestCase):
 
     def setUp(self):
-        self.page = Page(" " * 4096)
+        self.page = Page(list(" " * 4096))
 
     def test_set_response(self):
         result = self.page.put("test", "blah")
@@ -71,5 +71,12 @@ class PageTest(TestCase):
 
         result = self.page.get("test")
         result.should.be("blah")
+
+    def test_write(self):
+        self.page.put("test", "blah")
+        self.page.write()
+        tmp = self.page.mmf
+        assert tmp != ""
+
 
 
