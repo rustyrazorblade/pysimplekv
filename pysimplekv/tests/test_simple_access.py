@@ -29,7 +29,7 @@ class BaseTest(TestCase):
         except:
             pass
 
-        self.kv = PySimpleKV(self.location, initial_pages=2, page_size=256)
+        self.kv = PySimpleKV(self.location, initial_pages=2)
 
 class CreateAndOpenTest(BaseTest):
 
@@ -47,21 +47,9 @@ class CreateAndOpenTest(BaseTest):
         self.kv = PySimpleKV(self.location)
 
 
-class PersistenceTest(BaseTest):
-    def test_set_and_get(self):
-        self.kv.put('test', 'test')
-
-        bucket = self.kv.current_file.get_bucket('test')
-
-        bucket.should.contain("test")
-
-        self.kv.get('test').should.equal('test')
-
-
-
 class HashingTest(BaseTest):
     def test_hashing(self):
-        bucket = self.kv.current_file.get_bucket("test")
-        bucket.should.be.a(Page)
+        page = self.kv.current_file.get_page("test")
+        page.should.be.a(Page)
 
 

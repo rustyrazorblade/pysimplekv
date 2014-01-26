@@ -46,13 +46,14 @@ import mmap
 import struct
 import logging
 
+PAGE_SIZE = mmap.PAGESIZE * 2 # 8K page size
+
 class PySimpleKV(object):
 
-    def __init__(self, location, initial_pages = 128, page_size=8096, resize_multiplier=2):
+    def __init__(self, location, initial_pages = 128, resize_multiplier=2):
 
         self.current_file = PySimpleKVFile(location,
                                            pages=initial_pages,
-                                           page_size=page_size,
                                            resize_multiplier=resize_multiplier)
 
     def get(self, key):
@@ -74,21 +75,19 @@ class PySimpleKVFile(object):
     """
     fp = None
     version = 1
-    header = struct.Struct("4s5H")
     pages = None
     resize_multiplier = None
     keys_per_Page = None
-    page_size = None
 
-    def __init__(self, location, pages = 64, page_size=8096, resize_multiplier=2):
+    def __init__(self, location, pages = 64, resize_multiplier=2):
         """
         location is a specific file with a .pskv extension
         page_size is in bytes
         """
         self.location = location
         self.resize_multiplier = resize_multiplier
-        self.pages = pages
-        self.page_size = page_size
+        self.page_count = pages
+        self.pages = {}
 
         try:
             # open the file, read the header
@@ -96,36 +95,38 @@ class PySimpleKVFile(object):
         except:
             self.create()
 
+    def get_mmf(self, page_num):
+        offset = PAGE_SIZE * page_num
+        mmf = mmap.mmap(self.fp.fileno(), PAGE_SIZE, offset=offset)
+        return mmf
+
     def create(self):
         self.fp = open(self.location, 'w+b')
-        # write out the header
+        # allocate the file
+        for x in range(self.page_count + 1):
+            self.fp.write(PAGE_SIZE * " ") # header
+        # create first page
+        mmf = self.get_mmf(0)
+        self.pages[0] = Page(mmf)
 
-        header = self.header.pack("pskv", self.version, self.page_size)
-        self.fp.write(header)
-
-        # fill out the file
-        page_size = keys_per_page * entry_size
-
-        # ensure we don't take up memory equal to our new file
-        zeroed_Page = struct.pack("c", " ") * Page_size
-
-        for i in range(initial_Pages):
-            self.fp.write(zeroed_Page)
 
     def open(self):
-        tmp = open(self.location, 'r+b')
-        self.fp = mmap.mmap(tmp.fileno())
-        header = self.fp.read(32)
+        self.fp = open(self.location, 'r+b')
 
     def get_page_number(self, key):
         md5 = hashlib.md5()
         md5.update(key)
-        return int(md5.hexdigest(), 16) % self.Pages
+        return int(md5.hexdigest(), 16) % self.page_count + 1
 
     def get_page(self, key):
         page_num = self.get_page_number(key)
-        self.seek_to_page(page_num)
-        return Page(self.fp, self.entry_size, self.key_size, self.keys_per_Page)
+        try:
+            return self.pages[page_num]
+        except KeyError as ie:
+            offset = page_num * PAGE_SIZE
+            mmf = mmap.mmap(self.fp.fileno(), PAGE_SIZE, offset=offset)
+            self.pages[page_num] = Page(mmf)
+            return self.pages[page_num]
 
     def get(self, key):
         Page = self.get_page(key)
@@ -138,15 +139,6 @@ class PySimpleKVFile(object):
     def delete(self, key):
         page = self.get_page(key)
 
-    def write_to_page(self, page, key, value):
-        return None
-
-    def seek_to_page(self, page):
-        location = 32 + (page * self.pages) # 32 byte header
-
-        self.fp.seek(location)
-
-
 class PageFullException(Exception):
     pass
 
@@ -156,14 +148,18 @@ class Page(dict):
     entry_reader = None
     is_dirty = False
     start = None
+    mmf = None # memory mapped file
 
     records = None
 
 
-    def __init__(self, fp, page_size, start):
-        self.start = start
-        self.fp = fp
+    def __init__(self, mmf):
+        """
+        mmf is a memory mapped file pointer
+        """
+        self.mmf = mmf
         self.records = []
+        self.load()
 
     def load(self):
         # loads an entire Page into memory
@@ -171,48 +167,8 @@ class Page(dict):
 
     def write(self, key, value):
         # writes out the full page back to disk
-        self.seek_key_position(key)
-        value_size = self.entry_size - self.key_size
-        packed = self.entry_reader.pack(key.ljust(self.key_size, " "), value.ljust(value_size, " "))
-        self.fp.write(packed)
-        logging.debug("Packed string: %s", packed)
 
         return
-
-    def seek_key_position(self, key):
-        # finds a position to write a key
-        available = None
-
-        for i in range(self.keys_per_page):
-            current = self.fp.tell()
-            logging.debug("looking for write position (current %d)", current)
-            tmp = self.fp.read(self.entry_size)
-            (k, _) = self.entry_reader.unpack(tmp)
-            k = k.strip()
-
-            # if k isn't set, we can use this as our first available page location
-            if key == k:
-                logging.debug("found existing key %s", key)
-                self.fp.seek(current)
-                return
-
-            if k:
-                logging.debug("found non matching key %s", k)
-
-            if not k:
-                logging.debug("empty key at %d", current)
-
-                if not available:
-                    available = current
-                    logging.debug("setting available to %s", available)
-
-
-        if not available:
-            raise PageFullException
-
-        logging.debug("Seeking to position %s", available)
-        self.fp.seek(available)
-
 
     def get(self, key, default=None):
 
@@ -224,14 +180,7 @@ class Page(dict):
         return default
 
     def iteritems(self):
-        result = []
-        for i in range(self.keys_per_page):
-            tmp = self.fp.read(self.entry_size)
-            (key, value) = self.entry_reader.unpack(tmp)
-            if key:
-                result.append((key.strip(), value.strip()))
-
-        return iter(result)
+        return []
 
 
     def __iter__(self):
