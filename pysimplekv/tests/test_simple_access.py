@@ -94,7 +94,7 @@ class PageTest(TestCase):
         self.page.load()
 
     def test_many_writes(self):
-        for x in range(200):
+        for x in range(500):
             k = str(x)
             self.page.put(k, k)
 

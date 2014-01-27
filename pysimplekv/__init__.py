@@ -45,6 +45,7 @@ import os
 import mmap
 import struct
 import logging
+from gevent.lock import BoundedSemaphore
 
 PAGE_SIZE = mmap.PAGESIZE * 2 # 8K page size
 
@@ -154,7 +155,7 @@ class Page(dict):
     mmf = None # memory mapped file
 
     records = None
-
+    lock = None
 
     def __init__(self, mmf):
         """
@@ -162,34 +163,37 @@ class Page(dict):
         """
         self.mmf = mmf
         self.records = {}
+        self.lock = BoundedSemaphore(1)
         self.load()
 
     def load(self):
         # loads an entire Page into memory
         # get the number of records
-        tmp = self.mmf[:].strip()
-        if not tmp:
-            return
+        with self.lock:
+            tmp = self.mmf[:].strip()
 
-        header = self.mmf[0:2]
+            if not tmp:
+                return
 
-        (records) = struct.unpack("H", header)
-        body = self.mmf[2:]
-        self.records = {}
+            header = self.mmf[0:2]
 
-        # loop over the rows till we extract the correct num
-        for x in records:
-            # header
-            (length,) = struct.unpack("H", body[:2])
+            (records) = struct.unpack("H", header)
+            body = self.mmf[2:]
+            self.records = {}
 
-            record_data = body[2:2 + length]
+            # loop over the rows till we extract the correct num
+            for x in records:
+                # header
+                (length,) = struct.unpack("H", body[:2])
 
-            r = Record.loads(record_data)
+                record_data = body[2:2 + length]
 
-            key = r.key
-            self.records[key] = r
-            body = body[2+length:]
-            # the rest
+                r = Record.loads(record_data)
+
+                key = r.key
+                self.records[key] = r
+                body = body[2+length:]
+                # the rest
 
     def __len__(self):
         return len(self.records)
@@ -197,17 +201,18 @@ class Page(dict):
     def write(self):
         # writes out the full page back to disk
         # compose the header
-        header = page_header.pack(len(self.records))
-        data = []
-        for r in self.records.itervalues():
-            assert isinstance(r, Record)
-            row_data = r.dumps()
+        with self.lock:
+            header = page_header.pack(len(self.records))
+            data = []
+            for r in self.records.itervalues():
+                assert isinstance(r, Record)
+                row_data = r.dumps()
 
-            packed = struct.pack("H%ds" % len(row_data),
-                                 len(row_data), row_data)
-            data.append(packed)
-        self.mmf[:] = (header + "".join(data)).ljust(PAGE_SIZE)
-        return
+                packed = struct.pack("H%ds" % len(row_data),
+                                     len(row_data), row_data)
+                data.append(packed)
+            self.mmf[:] = (header + "".join(data)).ljust(PAGE_SIZE)
+            return
 
     def put(self, key, value):
         self.is_dirty = True
@@ -216,7 +221,6 @@ class Page(dict):
         else:
             response = 0
         self.records[key] = Record(key, value)
-        self.write()
         return response
 
     def get(self, key, default=None):
