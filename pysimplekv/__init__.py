@@ -51,7 +51,7 @@ PAGE_SIZE = mmap.PAGESIZE * 2 # 8K page size
 
 class PySimpleKV(object):
 
-    def __init__(self, location, initial_pages = 128, resize_multiplier=2):
+    def __init__(self, location, initial_pages = 64, resize_multiplier=4):
 
         self.current_file = PySimpleKVFile(location,
                                            pages=initial_pages,
@@ -135,7 +135,8 @@ class PySimpleKVFile(object):
 
     def put(self, key, value):
         page = self.get_page(key)
-        return page.write(key, value)
+        assert isinstance(page, Page)
+        return page.put(key, value)
 
     def delete(self, key):
         page = self.get_page(key)

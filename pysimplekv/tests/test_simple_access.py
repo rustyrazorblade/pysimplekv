@@ -52,6 +52,21 @@ class HashingTest(BaseTest):
         page = self.kv.current_file.get_page("test")
         page.should.be.a(Page)
 
+class FullIntegrationTest(BaseTest):
+    def test_iteration(self):
+        self.kv.put("one", "one")
+        self.kv.put("two", "two")
+        for key in self.kv:
+            assert isinstance(key, str)
+
+    def test_set_and_get(self):
+        self.kv.put("one", "one")
+        self.kv.put("two", "two")
+
+        result = self.kv.get("one")
+        assert result.value == "one"
+
+
 
 class PageTest(TestCase):
 
