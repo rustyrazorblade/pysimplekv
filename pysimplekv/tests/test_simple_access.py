@@ -67,7 +67,6 @@ class FullIntegrationTest(BaseTest):
         assert result.value == "one"
 
 
-
 class PageTest(TestCase):
 
     def setUp(self):
@@ -116,5 +115,14 @@ class PageTest(TestCase):
             assert tmp.value == k
             assert tmp.key == k
 
+    def test_iteration(self):
+        self.page.put("test1", "test1")
+        self.page.put("test2", "test2")
 
+        c = 0
+        for x in self.page:
+            c += 1
+            assert isinstance(x, Record)
+
+        assert c == 2
 
