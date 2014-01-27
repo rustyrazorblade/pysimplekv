@@ -1,8 +1,8 @@
 from unittest import TestCase
 import os
+import mmap
 import sure
 import mock
-import mmap
 
 from pysimplekv import PySimpleKV, Page, Record, PAGE_SIZE
 
