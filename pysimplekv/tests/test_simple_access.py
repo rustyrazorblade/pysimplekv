@@ -56,7 +56,14 @@ class HashingTest(BaseTest):
 class PageTest(TestCase):
 
     def setUp(self):
-        self.page = Page(list(" " * 4096))
+        self.fp = open('page_test.pskv', 'w+')
+        self.fp.write(" " * PAGE_SIZE)
+        self.mmf = mmap.mmap(self.fp.fileno(), 0)
+        self.page = Page(self.mmf)
+
+    def tearDown(self):
+        self.fp.close()
+
 
     def test_set_response(self):
         result = self.page.put("test", "blah")
@@ -70,13 +77,22 @@ class PageTest(TestCase):
         assert result == 0
 
         result = self.page.get("test")
-        result.should.be("blah")
+        result.value.should.be("blah")
 
     def test_write(self):
         self.page.put("test", "blah")
         self.page.write()
         tmp = self.page.mmf
         assert tmp != ""
+
+    def test_load(self):
+        self.page.put("test", "blah")
+        self.page.write()
+
+        tmp = self.page.mmf
+
+        self.page.load()
+
 
 
 

@@ -166,7 +166,30 @@ class Page(dict):
 
     def load(self):
         # loads an entire Page into memory
-        pass
+        # get the number of records
+        tmp = self.mmf[:].strip()
+        if not tmp:
+            return
+
+        header = self.mmf[0:2]
+
+        (records) = struct.unpack("H", header)
+        body = self.mmf[2:]
+        self.records = {}
+
+        # loop over the rows till we extract the correct num
+        for x in records:
+            # header
+            (length,) = struct.unpack("H", body[:2])
+
+            record_data = body[2:2 + length]
+
+            r = Record.loads(record_data)
+
+            key = r.key
+            self.records[key] = r
+            body = body[2+length:]
+            # the rest
 
     def __len__(self):
         return len(self.records)
@@ -180,9 +203,10 @@ class Page(dict):
             assert isinstance(r, Record)
             row_data = r.dumps()
 
-            packed = struct.pack("H%ds" % len(row_data), len(row_data), row_data)
+            packed = struct.pack("H%ds" % len(row_data),
+                                 len(row_data), row_data)
             data.append(packed)
-        self.mmf[:] = header + "".join(data)
+        self.mmf[:] = (header + "".join(data)).ljust(PAGE_SIZE)
         return
 
     def put(self, key, value):
@@ -196,20 +220,17 @@ class Page(dict):
         return response
 
     def get(self, key, default=None):
-        return self.records[key].value
+        return self.records[key]
 
     def iteritems(self):
         return []
 
 
     def __iter__(self):
-        return iter([x for (x,y) in self.iteritems()])
-
+        return self.records.itervalues()
 
     def __contains__(self, key):
-        for x in self:
-            if x == key:
-                return True
+        return key in self.records
 
 
 class Record(object):
