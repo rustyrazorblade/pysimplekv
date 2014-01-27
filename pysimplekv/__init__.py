@@ -69,6 +69,12 @@ class PySimpleKV(object):
     def resize(self, Pages, keys_per_Page):
         return
 
+    def __iter__(self):
+        for page in self.current_file.pages.itervalues():
+            for record in page.records.itervalues():
+                yield record
+
+
 
 class PySimpleKVFile(object):
     """

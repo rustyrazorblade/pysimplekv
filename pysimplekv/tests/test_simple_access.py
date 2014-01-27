@@ -56,8 +56,8 @@ class FullIntegrationTest(BaseTest):
     def test_iteration(self):
         self.kv.put("one", "one")
         self.kv.put("two", "two")
-        for key in self.kv:
-            assert isinstance(key, str)
+        for record in self.kv:
+            assert isinstance(record, Record), type(record)
 
     def test_set_and_get(self):
         self.kv.put("one", "one")
