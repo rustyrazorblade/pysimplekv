@@ -97,6 +97,9 @@ class PageTest(TestCase):
         for x in range(500):
             k = str(x)
             self.page.put(k, k)
+            tmp = self.page.get(k)
+            assert tmp.value == k
+            assert tmp.key == k
 
 
 
