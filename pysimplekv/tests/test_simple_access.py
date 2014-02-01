@@ -4,7 +4,8 @@ import mmap
 import sure
 import mock
 
-from pysimplekv import PySimpleKV, Page, Record, PAGE_SIZE
+from pysimplekv import PySimpleKV, Page, Record, PAGE_SIZE, PySimpleKVFile
+
 
 class RecordEncodingTest(TestCase):
     def test_key_encoding_and_decoding(self):
@@ -66,6 +67,22 @@ class FullIntegrationTest(BaseTest):
         result = self.kv.get("one")
         assert result.value == "one"
 
+class MoveTest(TestCase):
+    def setUp(self):
+        self.path = "move_test.pskv"
+        self.kv = PySimpleKVFile(self.path)
+
+    def tearDown(self):
+        os.unlink(self.path)
+
+    def test_move(self):
+        self.path = "new_location.pskv"
+        self.kv.move(self.path)
+        # move_test should no longer exist
+
+    def test_file_exists(self):
+        # should fail
+        pass
 
 class PageTest(TestCase):
 

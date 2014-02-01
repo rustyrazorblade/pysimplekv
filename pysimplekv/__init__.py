@@ -3,31 +3,11 @@ Simple K/V store.  Implemented as a hash table.  single file
 
 
 Data File format:
+    Page 1: all header information
+    Remaining pages are all data
 
-    Header: 32 bytes
-        4 byte: pskv <-- magic string so we know this is a pskv
-        2 byte: version (int), unsigned
-        2 byte: key length
-        2 bytes: entry size
-
-        2 bytes: Pages
-        2 bytes: keys per Page
-
-        remainder: reserved
-
-    Hash Table:
-        Page size * number of Pages
-        Page:
-            contains any number of entries
-            Entry: <length: short><key length:short><key><value length:short><value>
-
-            # deprecated already
-            Entry size * 32 (configurable)
-            Entry:  1024 configurable
-                Fixed sized key: 128 bytes (configurable)
-                Value: 892 bytes by default (entry - header - key size)
-
-
+    Page consists of a single short as a header, the number of records
+    Then all data.
 
 File is allocated at an initial fixed size
 
@@ -67,6 +47,7 @@ class PySimpleKV(object):
         return self.current_file.delete(key)
 
     def resize(self, Pages, keys_per_Page):
+        # i think this has to block
         return
 
     def __iter__(self):
@@ -102,7 +83,17 @@ class PySimpleKVFile(object):
         except:
             self.create()
 
+    def move(self, new_location):
+        os.rename(self.location, new_location)
+
     def get_mmf(self, page_num):
+        """
+        returns a memory mapped file pointer to a subsection of the file
+        each Page is initialized with one.  it enables us to lock down
+        a specific section of the file to each page, since it respects the
+        bounderies of PAGE_SIZE and offset.  Essentially we have a small
+        window into the file
+        """
         offset = PAGE_SIZE * page_num
         mmf = mmap.mmap(self.fp.fileno(), PAGE_SIZE, offset=offset)
         return mmf
